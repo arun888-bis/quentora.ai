@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Students | Quentora{% endblock %}
+{% block page_title %}Student Management{% endblock %}
+
+{% block content %}
+
+<section class="lms-page-header">
+    <div>
+        <span class="section-kicker">Student Administration</span>
+        <h2>Student Management</h2>
+        <p>
+            View registered students and their academic information.
+        </p>
+    </div>
+</section>
+
+
+<section class="lms-section">
+
+    <div class="section-title-row">
+        <div>
+            <span class="section-kicker">Students</span>
+            <h3>Registered Students</h3>
+        </div>
+    </div>
+
+
+    {% if students %}
+
+    <div class="lms-card">
+
+        <div class="table-wrap">
+
+            <table class="data-table">
+
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Username</th>
+                        <th>Roll Number</th>
+                        <th>Class</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for student in students %}
+
+                    <tr>
+                        <td>
+                            <strong>
+                                {{ student.name or 'Not provided' }}
+                            </strong>
+                        </td>
+
+                        <td>
+                            {{ student.username or 'Not provided' }}
+                        </td>
+
+                        <td>
+                            {{ student.roll_number or 'Not assigned' }}
+                        </td>
+
+                        <td>
+                            {{ student.class_name or 'All Classes' }}
+                        </td>
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+    {% else %}
+
+    <article class="lms-card">
+
+        <div class="empty-state">
+            <h3>No Students Found</h3>
+            <p>
+                No student accounts have been registered yet.
+            </p>
+        </div>
+
+    </article>
+
+    {% endif %}
+
+</section>
+
+{% endblock %}

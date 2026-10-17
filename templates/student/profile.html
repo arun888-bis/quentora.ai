@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Profile | Quentora{% endblock %}
+{% block page_title %}Profile{% endblock %}
+
+{% block content %}
+
+<section class="lms-page-header">
+    <div>
+        <span class="section-kicker">Account</span>
+        <h2>Profile Information</h2>
+        <p>
+            Review your Quentora student account information.
+        </p>
+    </div>
+</section>
+
+
+<div class="lms-grid two">
+
+    <!-- ACCOUNT DETAILS -->
+
+    <article class="lms-card">
+
+        <div class="lms-card-header">
+            <h3>Account Details</h3>
+            <p>
+                Your personal and academic information.
+            </p>
+        </div>
+
+        <div class="detail-list">
+
+            <div>
+                <span>Name</span>
+                <strong>
+                    {{ student.name or 'Not provided' }}
+                </strong>
+            </div>
+
+            <div>
+                <span>Username</span>
+                <strong>
+                    {{ student.username or 'Not provided' }}
+                </strong>
+            </div>
+
+            <div>
+                <span>Roll Number</span>
+                <strong>
+                    {{ student.roll_number or 'Not provided' }}
+                </strong>
+            </div>
+
+            <div>
+                <span>Class</span>
+                <strong>
+                    {{ student.class_name or 'All Classes' }}
+                </strong>
+            </div>
+
+        </div>
+
+    </article>
+
+
+    <!-- ACCESS SUMMARY -->
+
+    <article class="lms-card accent">
+
+        <div class="lms-card-header">
+
+            <h3>Student Access</h3>
+
+            <p>
+                Your Quentora account provides access to
+                courses, assessments, marksheets, and
+                performance information.
+            </p>
+
+        </div>
+
+        <div class="detail-list">
+
+            <div>
+                <span>Account Type</span>
+                <strong>Student</strong>
+            </div>
+
+            <div>
+                <span>Courses</span>
+                <strong>Available Courses</strong>
+            </div>
+
+            <div>
+                <span>Assessments</span>
+                <strong>Available</strong>
+            </div>
+
+            <div>
+                <span>Results</span>
+                <strong>Mark Sheets</strong>
+            </div>
+
+        </div>
+
+    </article>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+
+{% block title %}Quentora Registration | AI Assessment Platform{% endblock %}
+
+{% block content %}
+
+<section class="login-page login-page-unified">
+
+    <div class="login-info-panel login-unified-panel">
+
+        <!-- ========================= -->
+        <!-- LEFT SIDE - QUENTORA INFO -->
+        <!-- ========================= -->
+
+        <div class="login-info-content">
+
+            <div class="login-logo-row">
+
+                <div class="login-logo-wrap">
+                    <img
+                        src="{{ url_for('static', filename='images/Quentora logo w bg new.png') }}"
+                        alt="Quentora"
+                        class="Quentora Logo"
+                    >
+                </div>
+
+                <div>
+                    <h1>Quentora</h1>
+                    <p>
+                        Contextual Intelligent Automated Grading System
+                    </p>
+                </div>
+
+            </div>
+
+
+            <div class="login-hero-text">
+
+                <span class="login-kicker">
+                    Academic Assessment Portal
+                </span>
+
+                <h2>
+                    Create your Quentora account.
+                </h2>
+
+                <p>
+                    Join the Quentora learning assessment platform to access
+                    courses, assessments, AI-generated MCQs, and performance
+                    reporting through a secure university-style LMS environment.
+                </p>
+
+            </div>
+
+
+            <!-- FEATURE CARDS -->
+
+            <div class="login-feature-grid">
+
+                <div class="login-feature">
+
+                    <span>01</span>
+
+                    <p>
+                        Role-based access for students and teachers.
+                    </p>
+
+                </div>
+
+
+                <div class="login-feature">
+
+                    <span>02</span>
+
+                    <p>
+                        Access assessments and learning resources.
+                    </p>
+
+                </div>
+
+
+                <div class="login-feature">
+
+                    <span>03</span>
+
+                    <p>
+                        AI-assisted assessment and performance reporting.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ========================= -->
+        <!-- RIGHT SIDE - REGISTRATION -->
+        <!-- ========================= -->
+
+        <div class="login-card-panel">
+
+            <div class="login-card">
+
+                <div class="login-card-header">
+
+                    <div class="login-card-logo">
+
+                        <img
+                            src="{{ url_for('static', filename='images/Quentora logo w bg new.png') }}"
+                            alt="Quentora Logo"
+                        >
+
+                    </div>
+
+                    <h2>
+                        Create your Quentora account
+                    </h2>
+
+                    <p>
+                        Register as a student or teacher to continue.
+                    </p>
+
+                </div>
+
+
+                <!-- ERROR MESSAGE -->
+
+                {% if error %}
+
+                    <div class="alert alert-danger login-alert">
+                        {{ error }}
+                    </div>
+
+                {% endif %}
+
+
+                <!-- REGISTRATION FORM -->
+
+                <form
+                    method="POST"
+                    action="/register"
+                    class="login-form"
+                >
+
+
+                    <!-- FULL NAME -->
+
+                    <div class="form-group">
+
+                        <label for="name">
+                            Full Name
+                        </label>
+
+                        <input
+                            type="text"
+                            id="name"
+                            name="name"
+                            placeholder="Enter your full name"
+                            autocomplete="name"
+                            required
+                        >
+
+                    </div>
+
+
+                    <!-- USERNAME -->
+
+                    <div class="form-group">
+
+                        <label for="username">
+                            Username
+                        </label>
+
+                        <input
+                            type="text"
+                            id="username"
+                            name="username"
+                            placeholder="Choose a username"
+                            autocomplete="username"
+                            required
+                        >
+
+                    </div>
+
+
+                    <!-- PASSWORD -->
+
+                    <div class="form-group">
+
+                        <label for="password">
+                            Password
+                        </label>
+
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            placeholder="Enter your password"
+                            autocomplete="new-password"
+                            required
+                        >
+
+                    </div>
+
+
+                    <!-- CONFIRM PASSWORD -->
+
+                    <div class="form-group">
+
+                        <label for="confirm_password">
+                            Confirm Password
+                        </label>
+
+                        <input
+                            type="password"
+                            id="confirm_password"
+                            name="confirm_password"
+                            placeholder="Confirm your password"
+                            autocomplete="new-password"
+                            required
+                        >
+
+                    </div>
+
+
+                    
+                    <!-- ACCOUNT TYPE -->
+                    <div class="form-group">
+                        <label for="role">Account Type</label>
+
+                            <select id="role" name="role" required>
+                                <option value="student" selected>Student</option>
+                            </select>
+                    </div>
+
+                    <!-- CREATE ACCOUNT BUTTON -->
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary btn-wide login-submit"
+                    >
+                        Create Account
+                    </button>
+
+                </form>
+
+
+                <!-- LOGIN LINK -->
+
+                <div
+                    style="text-align: center; margin-top: 20px;"
+                >
+
+                    <span>
+                        Already have an account?
+                    </span>
+
+                    <a href="/login">
+                        Sign in
+                    </a>
+
+                </div>
+
+
+                <!-- SECURITY MESSAGE -->
+
+                <div class="login-security-note">
+
+                    <span class="security-dot"></span>
+
+                    <p>
+                        Secure role-based registration.
+                        Administrator accounts are managed separately.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- FOOTER -->
+
+            <div class="login-footer-note">
+
+                <p>
+                    Quentora · AI-Powered Assessment Platform
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+{% endblock %}
