@@ -20,7 +20,8 @@ def get_db_connection():
     )
 
 app = Flask(__name__)
-app.secret_key = 'secret'
+
+app.secret_key = os.getenv("SECRET_KEY")
 # -------------------------------------------------------
 # Quentora Grading Engine Configuration
 # -------------------------------------------------------
