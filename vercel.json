@@ -1,16 +1,9 @@
 
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "app.py",
-      "use": "@vercel/python"
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "app.py": {
+      "excludeFiles": "{llm_scorer.py,models/**,training_data/**,book_dataset/**}"
     }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "app.py"
-    }
-  ]
+  }
 }
