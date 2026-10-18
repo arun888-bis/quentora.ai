@@ -14,6 +14,11 @@ from psycopg.rows import dict_row
 from config import DB_CONFIG
 
 def get_db_connection():
+    print("DEBUG - App file:", __file__)
+    print("DEBUG - Password configured:", bool(DB_CONFIG.get("password")))
+    print("DEBUG - DB host:", DB_CONFIG.get("host"))
+    print("DEBUG - DB name:", DB_CONFIG.get("dbname"))
+
     return psycopg.connect(
         **DB_CONFIG,
         row_factory=dict_row

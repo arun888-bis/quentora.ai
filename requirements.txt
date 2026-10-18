@@ -1,11 +1,8 @@
+
 Flask
-mysql-connector-python
+psycopg[binary]
 scikit-learn
 PyPDF2
 python-docx
 python-pptx
 requests
-torch
-transformers
-peft
-bitsandbytes

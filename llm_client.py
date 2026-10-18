@@ -1,10 +1,66 @@
+
+import os
+import json
+import re
 import requests
 
-# Quentora AI MCQ generation service
-MCQ_API_BASE_URL = "http://127.0.0.1:5001"
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash").strip()
 
-# Existing scoring API — leave this unchanged for now.
-SCORING_API_BASE_URL = "https://styles-wet-correct-interference.trycloudflare.com"
+GEMINI_URL = (
+    f"https://generativelanguage.googleapis.com/v1beta/"
+    f"models/{GEMINI_MODEL}:generateContent"
+)
+
+
+def _gemini(prompt, timeout=90):
+    """Send a prompt directly to the Gemini API."""
+    if not GEMINI_API_KEY:
+        raise RuntimeError("GEMINI_API_KEY environment variable is missing.")
+
+    response = requests.post(
+        GEMINI_URL,
+        headers={
+            "x-goog-api-key": GEMINI_API_KEY,
+            "Content-Type": "application/json",
+        },
+        json={
+            "contents": [
+                {"parts": [{"text": prompt}]}
+            ],
+            "generationConfig": {
+                "temperature": 0.2,
+                "maxOutputTokens": 8192,
+                "responseMimeType": "application/json",
+            },
+        },
+        timeout=timeout,
+    )
+
+    if response.status_code != 200:
+        try:
+            message = response.json().get("error", {}).get("message", "")
+        except Exception:
+            message = response.text
+        raise RuntimeError(
+            f"Gemini API error {response.status_code}: {message[:500]}"
+        )
+
+    data = response.json()
+    candidates = data.get("candidates", [])
+
+    if not candidates:
+        raise RuntimeError("Gemini returned no response candidates.")
+
+    parts = candidates[0].get("content", {}).get("parts", [])
+    text = "\n".join(p.get("text", "") for p in parts if p.get("text"))
+
+    if not text.strip():
+        raise RuntimeError("Gemini returned an empty response.")
+
+    text = re.sub(r"^```(?:json)?\s*", "", text.strip())
+    text = re.sub(r"\s*```$", "", text)
+    return json.loads(text)
 
 
 def predict_justification_score_api(
@@ -14,65 +70,38 @@ def predict_justification_score_api(
     expected_answer="",
     question="",
     options="",
-    **kwargs
+    **kwargs,
 ):
-    """
-    Calls the external scoring API.
+    """Return a score between 0 and 100, or None if Gemini fails."""
+    student = (student_justification or student_answer or "").strip()
+    expected = (model_justification or expected_answer or "").strip()
 
-    Important:
-    - Return a numeric score only when the LLM API gives a valid score.
-    - Return None when the API fails, times out, or gives invalid output.
-    - app.py will then safely fall back to cosine similarity.
-    """
+    if not student:
+        return 0.0
 
+    prompt = f"""
+Evaluate the student's written reasoning for an academic assessment.
+
+Return JSON only:
+{{"score": 75, "feedback": "Specific feedback"}}
+
+Give a score from 0 to 100 based on conceptual accuracy, relevance,
+reasoning and completeness. Accept correct explanations in different words.
+Do not judge solely by keyword overlap. Do not invent facts about the response.
+
+Question: {question}
+Options: {options}
+Expected reasoning: {expected}
+Student reasoning: {student}
+"""
     try:
-        base_url = SCORING_API_BASE_URL.rstrip("/")
-        url = f"{base_url}/score"
-
-        payload = {
-            "question": question or "",
-            "options": options or "",
-            "student_justification": student_justification or student_answer or "",
-            "model_justification": model_justification or expected_answer or "",
-            "student_answer": student_answer or student_justification or "",
-            "expected_answer": expected_answer or model_justification or ""
-        }
-
-        response = requests.post(url, json=payload, timeout=25)
-
-        if response.status_code != 200:
-            print("LLM scoring API returned non-200 status:", response.status_code)
-            return None
-
-        try:
-            data = response.json()
-        except Exception as e:
-            print("LLM scoring API did not return valid JSON:", e)
-            return None
-
-        score = (
-            data.get("score")
-            or data.get("predicted_score")
-            or data.get("llm_score")
-        )
-
-        if score is None:
-            print("LLM scoring API response has no score field:", data)
-            return None
-
-        score = float(score)
-
-        if score < 0:
-            score = 0.0
-
-        if score > 100:
-            score = 100.0
-
-        return score
-
-    except Exception as e:
-        print("LLM scoring API failed. App will use cosine fallback:", e)
+        result = _gemini(prompt)
+        score = float(result["score"])
+        return max(0.0, min(100.0, score))
+    except Exception as exc:
+        print("Gemini scoring failed:", str(exc))
         return None
+
 
 def predict_justification_evaluation_api(
     student_justification="",
@@ -81,74 +110,45 @@ def predict_justification_evaluation_api(
     expected_answer="",
     question="",
     options="",
-    **kwargs
+    **kwargs,
 ):
-    """
-    Returns:
-        {
-            "score": float,
-            "feedback": str
-        }
+    """Return score and feedback. Raise on API failure for app.py fallback."""
+    student = (student_justification or student_answer or "").strip()
+    expected = (model_justification or expected_answer or "").strip()
 
-    Supports different possible Colab /score response formats.
-    If feedback is not returned by Colab, a safe academic fallback feedback is generated.
-    """
-    try:
-        url = f"{SCORING_API_BASE_URL.rstrip('/')}/score"
-
-        payload = {
-            "question": question or "",
-            "options": options or "",
-            "student_justification": student_justification or student_answer or "",
-            "model_justification": model_justification or expected_answer or "",
-            "student_answer": student_answer or student_justification or "",
-            "expected_answer": expected_answer or model_justification or ""
-        }
-
-        response = requests.post(url, json=payload, timeout=120)
-        data = response.json()
-
-        score = (
-            data.get("score")
-            or data.get("predicted_score")
-            or data.get("llm_score")
-            or data.get("justification_score")
-            or 0
-        )
-
-        feedback = (
-            data.get("feedback")
-            or data.get("llm_feedback")
-            or data.get("explanation")
-            or data.get("reason")
-            or data.get("comment")
-            or ""
-        )
-
-        score = float(score)
-
-        if not feedback:
-            if score >= 80:
-                feedback = "The student demonstrated strong conceptual understanding and explained the answer clearly."
-            elif score >= 50:
-                feedback = "The student showed partial understanding, but the explanation needs more clarity and completeness."
-            elif score > 0:
-                feedback = "The response shows limited understanding and needs a more accurate explanation of the concept."
-            else:
-                feedback = "The response does not provide enough relevant reasoning for the selected answer."
-
-        return {
-            "score": score,
-            "feedback": feedback
-        }
-
-    except Exception as e:
-        print("LLM evaluation API failed:", e)
-
+    if not student:
         return {
             "score": 0.0,
-            "feedback": "Detailed AI feedback could not be prepared at this moment."
+            "feedback": "No written justification was submitted.",
         }
+
+    prompt = f"""
+Evaluate this student's written reasoning fairly.
+
+Return JSON only in this format:
+{{"score": 75, "feedback": "Explain what is correct or missing."}}
+
+Rules:
+- Score from 0 to 100.
+- Assess conceptual accuracy, relevance, reasoning and completeness.
+- Accept valid alternative wording and explanations.
+- Do not award a high score based only on matching keywords.
+- Feedback must be brief, specific and supported by the student's response.
+
+Question: {question}
+Options: {options}
+Expected reasoning: {expected}
+Student reasoning: {student}
+"""
+    result = _gemini(prompt)
+    score = max(0.0, min(100.0, float(result["score"])))
+    feedback = str(result.get("feedback", "")).strip()
+
+    if not feedback:
+        feedback = "Reviewed for accuracy, relevance and completeness."
+
+    return {"score": score, "feedback": feedback}
+
 
 def generate_mcqs_from_notes_api(
     notes_text="",
@@ -159,62 +159,107 @@ def generate_mcqs_from_notes_api(
     difficulty="Mixed",
     question_type="MCQ",
 ):
+    """Generate MCQs directly using Gemini."""
     try:
-        base_url = MCQ_API_BASE_URL.rstrip("/")
-        url = f"{base_url}/generate_mcqs"
+        count = max(1, min(int(num_mcqs), 50))
+        notes = (notes_text or "").strip()
 
-        payload = {
-        "notes_text": notes_text or "",
-        "num_mcqs": int(num_mcqs),
-        "topic_name": topic_name or "",
-        "target_topic": target_topic or "",
-        "generation_mode": generation_mode or "pasted_notes",
-        "difficulty": difficulty or "Mixed",
-        "question_type": question_type or "MCQ"
-    }
-        print("Payload question type:", payload["question_type"])
-        print("Calling MCQ API:", url)
-        print("Payload mode:", payload["generation_mode"])
-        print("Payload notes length:", len(payload["notes_text"]))
-        print("Payload target topic:", payload["target_topic"])
+        if not notes:
+            raise ValueError("Please provide notes for question generation.")
 
-        response = requests.post(url, json=payload, timeout=240)
+        prompt = f"""
+You are Quentora's educational question generator.
 
-        print("MCQ API status:", response.status_code)
-        print("MCQ API response preview:", response.text[:500])
+Generate {count} questions from the supplied notes.
+Topic: {topic_name or "Use the notes"}
+Target topic: {target_topic or "Main concepts"}
+Generation mode: {generation_mode}
+Difficulty: {difficulty}
+Question type: {question_type}
 
-        try:
-            data = response.json()
-        except Exception:
-            return {
-                "success": False,
-                "partial_success": False,
-                "exact_success": False,
-                "requested_count": num_mcqs,
-                "returned_count": 0,
-                "mcqs": [],
-                "message": "",
-                "error": (
-                    f"MCQ API did not return valid JSON. "
-                    f"Status={response.status_code}. "
-                    f"Preview={response.text[:300]}"
-                ),
-                "raw_output": ""
-            }
+Return JSON only, with this structure:
+{{
+  "mcqs": [
+    {{
+      "question": "Question text",
+      "option_a": "First option",
+      "option_b": "Second option",
+      "option_c": "Third option",
+      "option_d": "Fourth option",
+      "correct_option": "A",
+      "model_justification": "Explain why the answer is correct.",
+      "difficulty": "Easy",
+      "question_type": "MCQ"
+    }}
+  ]
+}}
+
+Requirements:
+- Create up to {count} valid questions based on the notes.
+- Each MCQ must have four distinct options and one correct answer.
+- correct_option must be A, B, C or D.
+- Include a useful model_justification for later student evaluation.
+- Use the requested difficulty. If Mixed, vary difficulty.
+- Avoid duplicate questions and ambiguous choices.
+- Do not invent facts unsupported by the notes.
+- For True/False questions, use option_a=True, option_b=False,
+  option_c=Not applicable, option_d=Not applicable.
+  Set correct_option to A for True or B for False.
+- Do not include Markdown fences or text outside the JSON object.
+
+NOTES:
+{notes[:30000]}
+"""
+        result = _gemini(prompt, timeout=180)
+        items = result.get("mcqs", [])
+        mcqs = []
+
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+
+            q = str(item.get("question", "")).strip()
+            a = str(item.get("option_a", "")).strip()
+            b = str(item.get("option_b", "")).strip()
+            c = str(item.get("option_c", "")).strip()
+            d = str(item.get("option_d", "")).strip()
+            correct = str(item.get("correct_option", "")).strip().upper()
+
+            if not (q and a and b and correct in {"A", "B"}):
+                if not (q and a and b and c and d and correct in {"A", "B", "C", "D"}):
+                    continue
+
+            mcqs.append({
+                "question": q,
+                "option_a": a,
+                "option_b": b,
+                "option_c": c,
+                "option_d": d,
+                "correct_option": correct,
+                "model_justification": str(
+                    item.get("model_justification", "")
+                ).strip(),
+                "difficulty": str(item.get("difficulty") or difficulty),
+                "question_type": str(item.get("question_type") or question_type),
+            })
+
+        mcqs = mcqs[:count]
+        returned = len(mcqs)
 
         return {
-            "success": data.get("success", False),
-            "partial_success": data.get("partial_success", False),
-            "exact_success": data.get("exact_success", False),
-            "requested_count": data.get("requested_count", num_mcqs),
-            "returned_count": data.get("returned_count", len(data.get("mcqs", []))),
-            "mcqs": data.get("mcqs", []),
-            "message": data.get("message", ""),
-            "error": data.get("error"),
-            "raw_output": data.get("raw_output", "")
+            "success": returned > 0,
+            "partial_success": 0 < returned < count,
+            "exact_success": returned == count,
+            "requested_count": count,
+            "returned_count": returned,
+            "mcqs": mcqs,
+            "message": f"Generated {returned} of {count} questions.",
+            "error": None if returned else "No valid questions were returned.",
+            "raw_output": json.dumps(result, ensure_ascii=False),
         }
 
-    except Exception as e:
+    except Exception as exc:
+        print("Gemini MCQ generation failed:", str(exc))
         return {
             "success": False,
             "partial_success": False,
@@ -223,41 +268,6 @@ def generate_mcqs_from_notes_api(
             "returned_count": 0,
             "mcqs": [],
             "message": "",
-            "error": str(e),
-            "raw_output": ""
+            "error": str(exc),
+            "raw_output": "",
         }
-
-# -------------------------------------------------------
-# Direct test
-# Run: python llm_client.py
-# -------------------------------------------------------
-
-if __name__ == "__main__":
-    score = predict_justification_score_api(
-        question="Which data type is used to store decimal numbers?",
-        options="A) int B) string C) float D) boolean",
-        model_justification="Float data type is used to store numbers with decimal points.",
-        student_justification="Float is used for decimal values because it can store numbers with fractional parts."
-    )
-
-    print("Predicted score from Colab API:", score)
-
-    sample_notes = """
-    A stack is a linear data structure that follows the Last In First Out principle, also called LIFO.
-    The main operations of stack are push, pop, and peek.
-    Push inserts an element at the top of the stack.
-    Pop removes the top element from the stack.
-    Peek returns the top element without removing it.
-    """
-
-    generated_mcqs = generate_mcqs_from_notes_api(
-        notes_text=sample_notes,
-        num_mcqs=3,
-        topic_name="Stack",
-        target_topic="Stack operations",
-        generation_mode="pasted_notes",
-        question_type="True/False"
-    )
-
-    print("\nGenerated MCQs from Colab API:")
-    print(generated_mcqs)

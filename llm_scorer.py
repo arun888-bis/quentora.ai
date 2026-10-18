@@ -138,7 +138,7 @@ def predict_justification_score(question, options, model_justification, student_
     """
     Returns only the justification quality score from 0 to 100.
     This score will later be converted in app.py:
-        justification_marks = (score / 100) * 0.6
+        justification_marks = (score / 100) * 0.2
     """
 
     if not student_justification or not student_justification.strip():
