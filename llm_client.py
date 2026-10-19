@@ -1,66 +1,166 @@
 
+
 import os
 import json
 import re
 import requests
 
+# Primary Gemini model
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash").strip()
 
-GEMINI_URL = (
-    f"https://generativelanguage.googleapis.com/v1beta/"
-    f"models/{GEMINI_MODEL}:generateContent"
-)
+# Fallback models are tried automatically if the previous model fails.
+# You can override this list using GEMINI_FALLBACK_MODELS in Vercel.
+DEFAULT_FALLBACK_MODELS = [
+    "gemini-3.7-flash",
+    "gemini-3.6-flash",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash-lite",
+]
+
+_env_fallback_models = os.getenv("GEMINI_FALLBACK_MODELS", "").strip()
+
+if _env_fallback_models:
+    FALLBACK_MODELS = [
+        model.strip()
+        for model in _env_fallback_models.split(",")
+        if model.strip()
+    ]
+else:
+    FALLBACK_MODELS = DEFAULT_FALLBACK_MODELS
 
 
-def _gemini(prompt, timeout=90):
-    """Send a prompt directly to the Gemini API."""
+def _gemini(prompt, timeout=90, models=None):
+    """
+    Call Gemini using a sequence of models.
+    If one model fails, try the next model automatically.
+    """
+
     if not GEMINI_API_KEY:
-        raise RuntimeError("GEMINI_API_KEY environment variable is missing.")
-
-    response = requests.post(
-        GEMINI_URL,
-        headers={
-            "x-goog-api-key": GEMINI_API_KEY,
-            "Content-Type": "application/json",
-        },
-        json={
-            "contents": [
-                {"parts": [{"text": prompt}]}
-            ],
-            "generationConfig": {
-                "temperature": 0.2,
-                "maxOutputTokens": 8192,
-                "responseMimeType": "application/json",
-            },
-        },
-        timeout=timeout,
-    )
-
-    if response.status_code != 200:
-        try:
-            message = response.json().get("error", {}).get("message", "")
-        except Exception:
-            message = response.text
         raise RuntimeError(
-            f"Gemini API error {response.status_code}: {message[:500]}"
+            "GEMINI_API_KEY environment variable is missing."
         )
 
-    data = response.json()
-    candidates = data.get("candidates", [])
+    # Try the configured primary model first, then the fallback models.
+    model_candidates = models or [GEMINI_MODEL, *FALLBACK_MODELS]
 
-    if not candidates:
-        raise RuntimeError("Gemini returned no response candidates.")
+    # Remove duplicates while preserving the order.
+    model_candidates = list(dict.fromkeys(model_candidates))
 
-    parts = candidates[0].get("content", {}).get("parts", [])
-    text = "\n".join(p.get("text", "") for p in parts if p.get("text"))
+    errors = []
 
-    if not text.strip():
-        raise RuntimeError("Gemini returned an empty response.")
+    for model in model_candidates:
+        url = (
+            "https://generativelanguage.googleapis.com/v1beta/"
+            f"models/{model}:generateContent"
+        )
 
-    text = re.sub(r"^```(?:json)?\s*", "", text.strip())
-    text = re.sub(r"\s*```$", "", text)
-    return json.loads(text)
+        try:
+            print(f"Trying Gemini model: {model}")
+
+            response = requests.post(
+                url,
+                headers={
+                    "x-goog-api-key": GEMINI_API_KEY,
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "contents": [
+                        {"parts": [{"text": prompt}]}
+                    ],
+                    "generationConfig": {
+                        "temperature": 0.2,
+                        "maxOutputTokens": 8192,
+                        "responseMimeType": "application/json",
+                    },
+                },
+                timeout=timeout,
+            )
+
+            if response.status_code != 200:
+                try:
+                    error_message = (
+                        response.json()
+                        .get("error", {})
+                        .get("message", "")
+                    )
+                except Exception:
+                    error_message = response.text
+
+                error = (
+                    f"{model}: HTTP {response.status_code}: "
+                    f"{error_message[:300]}"
+                )
+                errors.append(error)
+                print(f"Gemini model failed: {error}")
+                continue
+
+            data = response.json()
+            candidates = data.get("candidates", [])
+
+            if not candidates:
+                error = f"{model}: No response candidates returned."
+                errors.append(error)
+                print(error)
+                continue
+
+            candidate = candidates[0]
+
+            # A candidate may be blocked or have no usable response.
+            parts = candidate.get("content", {}).get("parts", [])
+            text = "\n".join(
+                part.get("text", "")
+                for part in parts
+                if part.get("text")
+            )
+
+            if not text.strip():
+                error = (
+                    f"{model}: Empty response. "
+                    f"Finish reason: {candidate.get('finishReason', 'unknown')}"
+                )
+                errors.append(error)
+                print(error)
+                continue
+
+            text = re.sub(r"^```(?:json)?\s*", "", text.strip())
+            text = re.sub(r"\s*```$", "", text)
+
+            try:
+                result = json.loads(text)
+            except json.JSONDecodeError as exc:
+                error = f"{model}: Invalid JSON response: {exc}"
+                errors.append(error)
+                print(error)
+                continue
+
+            print(f"Gemini generation succeeded with model: {model}")
+            return result
+
+        except requests.exceptions.Timeout:
+            error = f"{model}: Request timed out after {timeout} seconds."
+            errors.append(error)
+            print(error)
+            continue
+
+        except requests.exceptions.RequestException as exc:
+            error = f"{model}: Network request failed: {exc}"
+            errors.append(error)
+            print(error)
+            continue
+
+        except Exception as exc:
+            error = f"{model}: Unexpected error: {exc}"
+            errors.append(error)
+            print(error)
+            continue
+
+    # Every configured model failed.
+    raise RuntimeError(
+        "All Gemini models failed. Details: "
+        + " | ".join(errors)
+    )
+
 
 
 def predict_justification_score_api(
