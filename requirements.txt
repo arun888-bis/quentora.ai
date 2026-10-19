@@ -1,0 +1,9 @@
+
+Flask
+psycopg[binary]
+scikit-learn
+PyPDF2
+python-docx
+python-pptx
+requests
+python-dotenv

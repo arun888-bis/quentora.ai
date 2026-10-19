@@ -1,0 +1,55 @@
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Flask / Python local files
+instance/
+.env
+.env.*
+!.env.example
+*.log
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local cleanup archive
+_archive_before_final_cleanup/
+
+# Local databases and database backups
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.backup
+
+# Large model/training artifacts
+models/
+training_data/
+book_dataset/
+adapter_model.safetensors
+*.bin
+*.safetensors
+
+# Temporary files
+*.tmp
+*.bak
+
+# Test outputs and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local Python environments and secrets
+secrets/

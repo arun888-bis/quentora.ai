@@ -1,0 +1,1244 @@
+{% extends "base.html" %}
+
+{% block title %}Attempt Assessment | Quentora{% endblock %}
+{% block page_title %}Attempt Assessment{% endblock %}
+
+{% block content %}
+
+<section class="student-quiz-page" id="quizPage">
+
+    <!-- ============================= -->
+    <!-- ANTI-CHEATING HEADER -->
+    <!-- ============================= -->
+
+    <div id="securityBar" style="
+        background: #fff7ed;
+        border: 1px solid #fed7aa;
+        border-radius: 12px;
+        padding: 14px 18px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px;
+        flex-wrap: wrap;
+    ">
+
+        <div>
+            <strong>🔒 Secure Assessment Mode</strong>
+            <div style="font-size: 13px; margin-top: 4px;">
+                Tab switching and leaving fullscreen are monitored.
+            </div>
+        </div>
+
+        <div id="violationCounter" style="
+            font-weight: 700;
+            color: #b45309;
+        ">
+            Violations: 0 / 3
+        </div>
+
+    </div>
+
+
+    <!-- ============================= -->
+    <!-- QUIZ HEADER -->
+    <!-- ============================= -->
+
+    <header class="student-quiz-hero">
+
+        <div>
+            <span class="student-eyebrow">Assessment Attempt</span>
+
+            <h1>{{ quiz_name }}</h1>
+
+            <p>
+                {{ course_name }}
+                {% if class_name %}
+                    · {{ class_name }}
+                {% endif %}
+            </p>
+        </div>
+
+        <a
+            href="/student/quiz/{{ book_id }}"
+            class="student-btn student-btn-secondary"
+            id="backButton"
+        >
+            Back
+        </a>
+
+    </header>
+
+
+    <!-- ============================= -->
+    <!-- WARNING MESSAGE -->
+    <!-- ============================= -->
+
+    <div
+        id="securityWarning"
+        style="
+            display: none;
+            background: #fee2e2;
+            border: 1px solid #fca5a5;
+            color: #991b1b;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        "
+    >
+    </div>
+
+
+    <!-- ============================= -->
+    <!-- QUIZ FORM -->
+    <!-- ============================= -->
+
+    <form
+        method="POST"
+        action="/student/quiz/submit"
+        class="student-quiz-form"
+        id="quizForm"
+    >
+
+        <input
+            type="hidden"
+            name="book_id"
+            value="{{ book_id }}"
+        >
+
+        <input
+            type="hidden"
+            name="assessment_id"
+            value="{{ assessment_id }}"
+        >
+
+        <input
+            type="hidden"
+            name="mcq_ids"
+            value="{{ mcq_ids }}"
+        >
+
+        <!-- Anti-cheating data -->
+        <input
+            type="hidden"
+            name="anti_cheat_violations"
+            id="antiCheatViolations"
+            value="0"
+        >
+
+        <input
+            type="hidden"
+            name="auto_submitted"
+            id="autoSubmitted"
+            value="0"
+        >
+
+
+        <!-- ============================= -->
+        <!-- QUESTIONS -->
+        <!-- ============================= -->
+
+        <div class="student-quiz-list">
+
+            {% for mcq in mcqs %}
+
+                <article class="student-question-card">
+
+                    <div class="student-question-head">
+
+                        <span>
+                            Question {{ loop.index }}
+                        </span>
+
+                        <strong>
+                            1 Mark
+                        </strong>
+
+                    </div>
+
+
+                    <h2>
+                        {{ mcq.question }}
+                    </h2>
+
+
+                    <!-- OPTIONS -->
+
+                    <div class="student-option-grid">
+
+                        <label class="student-option-card">
+
+                            <input
+                                type="radio"
+                                name="option_{{ mcq.id }}"
+                                value="A"
+                            >
+
+                            <div class="student-option-letter">
+                                A
+                            </div>
+
+                            <div class="student-option-text">
+                                {{ mcq.option_a }}
+                            </div>
+
+                        </label>
+
+
+                        <label class="student-option-card">
+
+                            <input
+                                type="radio"
+                                name="option_{{ mcq.id }}"
+                                value="B"
+                            >
+
+                            <div class="student-option-letter">
+                                B
+                            </div>
+
+                            <div class="student-option-text">
+                                {{ mcq.option_b }}
+                            </div>
+
+                        </label>
+
+
+                        <label class="student-option-card">
+
+                            <input
+                                type="radio"
+                                name="option_{{ mcq.id }}"
+                                value="C"
+                            >
+
+                            <div class="student-option-letter">
+                                C
+                            </div>
+
+                            <div class="student-option-text">
+                                {{ mcq.option_c }}
+                            </div>
+
+                        </label>
+
+
+                        <label class="student-option-card">
+
+                            <input
+                                type="radio"
+                                name="option_{{ mcq.id }}"
+                                value="D"
+                            >
+
+                            <div class="student-option-letter">
+                                D
+                            </div>
+
+                            <div class="student-option-text">
+                                {{ mcq.option_d }}
+                            </div>
+
+                        </label>
+
+                    </div>
+
+
+                    <!-- JUSTIFICATION -->
+
+                    <div class="student-justification-box">
+
+                        <label>
+                            Justify your answer
+                        </label>
+
+                        <textarea
+                            name="justification_{{ mcq.id }}"
+                            rows="4"
+                            placeholder="Explain why you selected this option..."
+                        ></textarea>
+
+                    </div>
+
+                </article>
+
+            {% endfor %}
+
+        </div>
+
+
+        <!-- ============================= -->
+        <!-- SUBMIT BAR -->
+        <!-- ============================= -->
+
+        <div class="student-submit-bar">
+
+            <button
+                type="button"
+                class="student-btn student-btn-secondary"
+                id="cancelButton"
+            >
+                Cancel
+            </button>
+
+
+            <button
+                type="submit"
+                class="student-btn student-btn-primary"
+                id="submitButton"
+            >
+                Submit Assessment
+            </button>
+
+        </div>
+
+    </form>
+
+</section>
+
+
+<!-- ====================================== -->
+<!-- FULLSCREEN START SCREEN -->
+<!-- ====================================== -->
+
+<div
+    id="startTestOverlay"
+    style="
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.88);
+        z-index: 99999;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+    "
+>
+
+    <div
+        style="
+            background: white;
+            max-width: 520px;
+            width: 100%;
+            border-radius: 18px;
+            padding: 35px;
+            text-align: center;
+        "
+    >
+
+        <div style="font-size: 50px;">
+            🔒
+        </div>
+
+        <h2>
+            Secure Assessment
+        </h2>
+
+        <p style="line-height: 1.6;">
+
+            This assessment uses secure test mode.
+
+            <br><br>
+
+            During the test:
+
+            <br>
+            • Do not switch browser tabs.
+            <br>
+            • Do not exit fullscreen.
+            <br>
+            • Copy/paste shortcuts are disabled.
+            <br>
+            • The assessment may be automatically submitted after
+            <strong>3 security violations</strong>.
+
+        </p>
+
+        <button
+            type="button"
+            id="startTestButton"
+            class="student-btn student-btn-primary"
+            style="margin-top: 15px;"
+        >
+            Start Test
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- ====================================== -->
+<!-- WARNING MODAL -->
+<!-- ====================================== -->
+
+<div
+    id="warningModal"
+    style="
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.75);
+        z-index: 100000;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+    "
+>
+
+    <div
+        style="
+            background: white;
+            max-width: 480px;
+            width: 100%;
+            border-radius: 18px;
+            padding: 30px;
+            text-align: center;
+        "
+    >
+
+        <div
+            id="warningIcon"
+            style="font-size: 48px;"
+        >
+            ⚠️
+        </div>
+
+        <h2 id="warningTitle">
+            Security Warning
+        </h2>
+
+        <p
+            id="warningMessage"
+            style="line-height: 1.6;"
+        >
+        </p>
+
+        <button
+            type="button"
+            id="warningOkayButton"
+            class="student-btn student-btn-primary"
+        >
+            Return to Test
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- ====================================== -->
+<!-- JAVASCRIPT ANTI-CHEATING SYSTEM -->
+<!-- ====================================== -->
+
+<script>
+
+(function () {
+
+    "use strict";
+
+
+    /* =====================================
+       CONFIGURATION
+    ===================================== */
+
+    const MAX_VIOLATIONS = 3;
+
+    let violations = 0;
+
+    let testStarted = false;
+
+    let testSubmitted = false;
+
+    let warningOpen = false;
+
+
+    /* =====================================
+       ELEMENTS
+    ===================================== */
+
+    const quizForm =
+        document.getElementById("quizForm");
+
+    const startOverlay =
+        document.getElementById("startTestOverlay");
+
+    const startButton =
+        document.getElementById("startTestButton");
+
+    const warningModal =
+        document.getElementById("warningModal");
+
+    const warningMessage =
+        document.getElementById("warningMessage");
+
+    const warningOkayButton =
+        document.getElementById("warningOkayButton");
+
+    const violationCounter =
+        document.getElementById("violationCounter");
+
+    const antiCheatViolations =
+        document.getElementById("antiCheatViolations");
+
+    const autoSubmitted =
+        document.getElementById("autoSubmitted");
+
+    const backButton =
+        document.getElementById("backButton");
+
+    const cancelButton =
+        document.getElementById("cancelButton");
+
+    const submitButton =
+        document.getElementById("submitButton");
+
+
+    /* =====================================
+       UPDATE VIOLATION COUNTER
+    ===================================== */
+
+    function updateViolationCounter() {
+
+        violationCounter.textContent =
+            "Violations: " +
+            violations +
+            " / " +
+            MAX_VIOLATIONS;
+
+        antiCheatViolations.value =
+            violations;
+
+    }
+
+
+    /* =====================================
+       SHOW WARNING
+    ===================================== */
+
+    function showWarning(message) {
+
+        warningMessage.textContent = message;
+
+        warningModal.style.display = "flex";
+
+        warningOpen = true;
+
+    }
+
+
+    /* =====================================
+       HIDE WARNING
+    ===================================== */
+
+    function hideWarning() {
+
+        warningModal.style.display = "none";
+
+        warningOpen = false;
+
+    }
+
+
+    /* =====================================
+   REGISTER VIOLATION
+===================================== */
+
+async function registerViolation(reason) {
+
+    if (!testStarted || testSubmitted) {
+        return;
+    }
+
+    violations++;
+
+    updateViolationCounter();
+
+    console.warn(
+        "Quentora security violation:",
+        reason
+    );
+
+
+    /* =====================================
+       SEND VIOLATION TO FLASK
+    ===================================== */
+
+    try {
+
+        const formData = new FormData();
+
+        formData.append(
+            "assessment_id",
+            "{{ assessment_id }}"
+        );
+
+        formData.append(
+            "violation_type",
+            reason
+        );
+
+
+        const response = await fetch(
+            "/student/quiz/violation",
+            {
+                method: "POST",
+                body: formData,
+                credentials: "same-origin"
+            }
+        );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                "Violation request failed: " +
+                response.status
+            );
+
+        }
+
+
+        const data = await response.json();
+
+
+        console.log(
+            "Violation recorded:",
+            data
+        );
+
+
+        /*
+         * Use server-side violation count
+         * when available.
+         */
+
+        if (
+            data.success &&
+            typeof data.violation_count === "number"
+        ) {
+
+            violations =
+                data.violation_count;
+
+            updateViolationCounter();
+
+        }
+
+
+        /* =====================================
+           AUTO SUBMIT AFTER 3 VIOLATIONS
+        ===================================== */
+
+        if (
+            data.auto_submit ||
+            violations >= MAX_VIOLATIONS
+        ) {
+
+            autoSubmitted.value = "1";
+
+            testSubmitted = true;
+
+            warningModal.style.display = "none";
+
+
+            alert(
+                "You have reached the maximum number " +
+                "of security violations. " +
+                "Your assessment will now be submitted."
+            );
+
+
+            quizForm.submit();
+
+            return;
+        }
+
+
+    } catch (error) {
+
+        console.error(
+            "Could not record security violation:",
+            error
+        );
+
+    }
+
+
+    /* =====================================
+       SHOW WARNING
+    ===================================== */
+
+    const remaining =
+        MAX_VIOLATIONS - violations;
+
+
+    showWarning(
+
+        "Security violation detected: " +
+        reason +
+        ". You have " +
+        remaining +
+        " warning(s) remaining. " +
+        "Please return to the assessment."
+
+    );
+
+}
+
+    /* =====================================
+       START TEST
+    ===================================== */
+
+    startButton.addEventListener(
+        "click",
+        async function () {
+
+            try {
+
+                if (document.documentElement.requestFullscreen) {
+
+                    await document.documentElement.requestFullscreen();
+
+                }
+
+            } catch (error) {
+
+                console.warn(
+                    "Fullscreen request was not allowed:",
+                    error
+                );
+
+            }
+
+
+            testStarted = true;
+
+            startOverlay.style.display = "none";
+
+            updateViolationCounter();
+
+        }
+    );
+
+
+    /* =====================================
+       FULLSCREEN EXIT DETECTION
+    ===================================== */
+
+    document.addEventListener(
+        "fullscreenchange",
+        function () {
+
+            if (
+                testStarted &&
+                !testSubmitted &&
+                !document.fullscreenElement
+            ) {
+
+                registerViolation(
+                    "You exited fullscreen mode"
+                );
+
+            }
+
+        }
+    );
+
+
+    /* =====================================
+       TAB SWITCH DETECTION
+    ===================================== */
+
+    document.addEventListener(
+        "visibilitychange",
+        function () {
+
+            if (
+                testStarted &&
+                !testSubmitted &&
+                document.hidden
+            ) {
+
+                registerViolation(
+                    "You switched to another tab or window"
+                );
+
+            }
+
+        }
+    );
+
+
+    /* =====================================
+       WINDOW BLUR DETECTION
+    ===================================== */
+
+    window.addEventListener(
+        "blur",
+        function () {
+
+            if (
+                testStarted &&
+                !testSubmitted
+            ) {
+
+                /*
+                 * We don't immediately count blur because
+                 * some browser interactions can trigger it.
+                 *
+                 * visibilitychange is the primary
+                 * tab-switch detector.
+                 */
+
+                console.log(
+                    "Window lost focus"
+                );
+
+            }
+
+        }
+    );
+
+
+    /* =====================================
+       BLOCK RIGHT CLICK
+    ===================================== */
+
+    document.addEventListener(
+        "contextmenu",
+        function (event) {
+
+            if (testStarted) {
+
+                event.preventDefault();
+
+            }
+
+        }
+    );
+
+
+    /* =====================================
+       BLOCK COPY
+    ===================================== */
+
+    document.addEventListener(
+        "copy",
+        function (event) {
+
+            if (testStarted) {
+
+                event.preventDefault();
+
+                registerViolation(
+                    "Copy action is disabled during the assessment"
+                );
+
+            }
+
+        }
+    );
+
+
+    /* =====================================
+       BLOCK CUT
+    ===================================== */
+
+    document.addEventListener(
+        "cut",
+        function (event) {
+
+            if (testStarted) {
+
+                event.preventDefault();
+
+                registerViolation(
+                    "Cut action is disabled during the assessment"
+                );
+
+            }
+
+        }
+    );
+
+
+    /* =====================================
+       BLOCK PASTE
+    ===================================== */
+
+    document.addEventListener(
+        "paste",
+        function (event) {
+
+            if (testStarted) {
+
+                event.preventDefault();
+
+                registerViolation(
+                    "Paste action is disabled during the assessment"
+                );
+
+            }
+
+        }
+    );
+
+
+    /* =====================================
+       BLOCK DRAG
+    ===================================== */
+
+    document.addEventListener(
+        "dragstart",
+        function (event) {
+
+            if (testStarted) {
+
+                event.preventDefault();
+
+            }
+
+        }
+    );
+
+
+    /* =====================================
+       KEYBOARD SECURITY
+    ===================================== */
+
+    document.addEventListener(
+        "keydown",
+        function (event) {
+
+            if (!testStarted) {
+                return;
+            }
+
+
+            const key =
+                event.key.toLowerCase();
+
+
+            const ctrl =
+                event.ctrlKey;
+
+            const shift =
+                event.shiftKey;
+
+            const alt =
+                event.altKey;
+
+
+            /*
+             * Ctrl shortcuts
+             */
+
+            if (
+                ctrl &&
+                (
+                    key === "c" ||
+                    key === "v" ||
+                    key === "x" ||
+                    key === "a" ||
+                    key === "u" ||
+                    key === "s" ||
+                    key === "p" ||
+                    key === "f" ||
+                    key === "r"
+                )
+            ) {
+
+                event.preventDefault();
+
+                registerViolation(
+                    "Restricted keyboard shortcut"
+                );
+
+                return;
+
+            }
+
+
+            /*
+             * Ctrl + Shift shortcuts
+             */
+
+            if (
+                ctrl &&
+                shift &&
+                (
+                    key === "i" ||
+                    key === "j" ||
+                    key === "c"
+                )
+            ) {
+
+                event.preventDefault();
+
+                registerViolation(
+                    "Developer tools shortcut is disabled"
+                );
+
+                return;
+
+            }
+
+
+            /*
+             * F12
+             */
+
+            if (event.key === "F12") {
+
+                event.preventDefault();
+
+                registerViolation(
+                    "Developer tools shortcut is disabled"
+                );
+
+                return;
+
+            }
+
+
+            /*
+             * Print Screen
+             *
+             * Browsers cannot guarantee OS-level
+             * screenshot prevention.
+             */
+
+            if (
+                event.key === "PrintScreen" ||
+                event.key === "Print Screen"
+            ) {
+
+                event.preventDefault();
+
+                registerViolation(
+                    "Screenshot shortcut detected"
+                );
+
+                return;
+
+            }
+
+
+            /*
+             * Alt + Left / Right
+             */
+
+            if (
+                alt &&
+                (
+                    key === "arrowleft" ||
+                    key === "arrowright"
+                )
+            ) {
+
+                event.preventDefault();
+
+                return;
+
+            }
+
+
+            /*
+             * Ctrl + Tab
+             *
+             * Browsers generally reserve this shortcut,
+             * so JavaScript cannot reliably prevent it.
+             */
+
+            if (
+                ctrl &&
+                key === "tab"
+            ) {
+
+                event.preventDefault();
+
+                return;
+
+            }
+
+        }
+    );
+
+
+    /* =====================================
+       PREVENT BACK BUTTON
+    ===================================== */
+
+    history.pushState(
+        null,
+        "",
+        location.href
+    );
+
+
+    window.addEventListener(
+        "popstate",
+        function () {
+
+            if (
+                testStarted &&
+                !testSubmitted
+            ) {
+
+                history.pushState(
+                    null,
+                    "",
+                    location.href
+                );
+
+                showWarning(
+                    "Please do not leave the assessment while the test is running."
+                );
+
+            }
+
+        }
+    );
+
+
+    /* =====================================
+       BACK LINK
+    ===================================== */
+
+    backButton.addEventListener(
+        "click",
+        function (event) {
+
+            if (
+                testStarted &&
+                !testSubmitted
+            ) {
+
+                event.preventDefault();
+
+                showWarning(
+                    "You cannot leave the assessment while it is in progress."
+                );
+
+            }
+
+        }
+    );
+
+
+    /* =====================================
+       CANCEL BUTTON
+    ===================================== */
+
+    cancelButton.addEventListener(
+        "click",
+        function () {
+
+            if (
+                confirm(
+                    "Are you sure you want to leave the assessment?"
+                )
+            ) {
+
+                window.location.href =
+                    "/student/quiz/{{ book_id }}";
+
+            }
+
+        }
+    );
+
+
+    /* =====================================
+       WARNING OK BUTTON
+    ===================================== */
+
+    warningOkayButton.addEventListener(
+        "click",
+        async function () {
+
+            hideWarning();
+
+
+            /*
+             * Try to restore fullscreen.
+             */
+
+            try {
+
+                if (
+                    !document.fullscreenElement &&
+                    document.documentElement.requestFullscreen
+                ) {
+
+                    await document.documentElement.requestFullscreen();
+
+                }
+
+            } catch (error) {
+
+                console.warn(
+                    "Could not restore fullscreen:",
+                    error
+                );
+
+            }
+
+        }
+    );
+
+
+    /* =====================================
+       FORM SUBMISSION
+    ===================================== */
+
+    quizForm.addEventListener(
+        "submit",
+        function (event) {
+
+            if (testSubmitted) {
+                return;
+            }
+
+
+            const confirmed =
+                confirm(
+                    "Submit this assessment? You will not be able to reattempt it."
+                );
+
+
+            if (!confirmed) {
+
+                event.preventDefault();
+
+                return;
+
+            }
+
+
+            testSubmitted = true;
+
+            submitButton.disabled = true;
+
+            submitButton.textContent =
+                "Submitting...";
+
+        }
+    );
+
+
+    /* =====================================
+       PAGE LOAD
+    ===================================== */
+
+    updateViolationCounter();
+
+
+})();
+
+</script>
+
+{% endblock %}

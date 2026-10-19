@@ -1,0 +1,9 @@
+
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "app.py": {
+      "excludeFiles": "{llm_scorer.py,models/**,training_data/**,book_dataset/**}"
+    }
+  }
+}

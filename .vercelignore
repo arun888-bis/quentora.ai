@@ -1,0 +1,12 @@
+
+.git
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+
+llm_scorer.py
+models/
+training_data/
+book_dataset/

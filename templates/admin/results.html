@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+<div style="text-align: center; margin: 40px 0;">
+    <h2>Student Results</h2>
+</div>
+
+<div style="max-width: 1000px; margin: 0 auto;">
+    <table>
+        <thead>
+            <tr>
+                <th>Student</th>
+                <th>Book</th>
+                <th>Total %</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for class in classes %}
+                {% for result in results[class.id] %}
+                <tr>
+                    <td>{{ result.student_name }} ({{ result.roll_number }})</td>
+                    <td>{{ result.book_title }}</td>
+                    <td>{{ result.total_percentage }}%</td>
+                    <td>
+                        <button
+                            onclick="location.href='/admin/results/student/{{ result.student_id }}/{{ result.book_id }}'"
+                            class="btn">
+                            View MCQ Details
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div style="text-align: center; margin-top: 40px;">
+    <button onclick="location.href='/admin/dashboard'" class="btn">
+        Back to Dashboard
+    </button>
+</div>
+{% endblock %}
