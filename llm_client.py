@@ -1,14 +1,9 @@
 
-<<<<<<< HEAD
-
-=======
->>>>>>> 0f0c3751fc5f9e432abb2864fd4318fe172f0dc6
 import os
 import json
 import re
 import requests
 
-<<<<<<< HEAD
 # Primary Gemini model
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash").strip()
@@ -46,7 +41,10 @@ def _gemini(prompt, timeout=90, models=None):
         )
 
     # Try the configured primary model first, then the fallback models.
-    model_candidates = models or [GEMINI_MODEL, *FALLBACK_MODELS]
+    model_candidates = models or [
+    GEMINI_MODEL,
+    *DEFAULT_FALLBACK_MODELS
+]
 
     # Remove duplicates while preserving the order.
     model_candidates = list(dict.fromkeys(model_candidates))
@@ -165,65 +163,33 @@ def _gemini(prompt, timeout=90, models=None):
         + " | ".join(errors)
     )
 
-=======
+
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash").strip()
 
-GEMINI_URL = (
-    f"https://generativelanguage.googleapis.com/v1beta/"
-    f"models/{GEMINI_MODEL}:generateContent"
-)
+# Try the faster model first
+GEMINI_MODEL = os.getenv(
+    "GEMINI_MODEL",
+    "gemini-3.5-flash-lite"
+).strip()
 
+DEFAULT_FALLBACK_MODELS = [
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.6-flash",
+    "gemini-3.8-flash",
+]
 
-def _gemini(prompt, timeout=90):
-    """Send a prompt directly to the Gemini API."""
-    if not GEMINI_API_KEY:
-        raise RuntimeError("GEMINI_API_KEY environment variable is missing.")
+_env_fallback_models = os.getenv(
+    "GEMINI_FALLBACK_MODELS", ""
+).strip()
 
-    response = requests.post(
-        GEMINI_URL,
-        headers={
-            "x-goog-api-key": GEMINI_API_KEY,
-            "Content-Type": "application/json",
-        },
-        json={
-            "contents": [
-                {"parts": [{"text": prompt}]}
-            ],
-            "generationConfig": {
-                "temperature": 0.2,
-                "maxOutputTokens": 8192,
-                "responseMimeType": "application/json",
-            },
-        },
-        timeout=timeout,
-    )
+if _env_fallback_models:
+    DEFAULT_FALLBACK_MODELS = [
+        model.strip()
+        for model in _env_fallback_models.split(",")
+        if model.strip()
+    ]
 
-    if response.status_code != 200:
-        try:
-            message = response.json().get("error", {}).get("message", "")
-        except Exception:
-            message = response.text
-        raise RuntimeError(
-            f"Gemini API error {response.status_code}: {message[:500]}"
-        )
-
-    data = response.json()
-    candidates = data.get("candidates", [])
-
-    if not candidates:
-        raise RuntimeError("Gemini returned no response candidates.")
-
-    parts = candidates[0].get("content", {}).get("parts", [])
-    text = "\n".join(p.get("text", "") for p in parts if p.get("text"))
-
-    if not text.strip():
-        raise RuntimeError("Gemini returned an empty response.")
-
-    text = re.sub(r"^```(?:json)?\s*", "", text.strip())
-    text = re.sub(r"\s*```$", "", text)
-    return json.loads(text)
->>>>>>> 0f0c3751fc5f9e432abb2864fd4318fe172f0dc6
 
 
 def predict_justification_score_api(
