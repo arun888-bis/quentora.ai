@@ -15,6 +15,7 @@ from config import DB_CONFIG
 
 def get_db_connection():
     print("DEBUG - App file:", __file__)
+    print("DEBUG - DB username:", DB_CONFIG.get("user"))
     print("DEBUG - Password configured:", bool(DB_CONFIG.get("password")))
     print("DEBUG - DB host:", DB_CONFIG.get("host"))
     print("DEBUG - DB name:", DB_CONFIG.get("dbname"))
