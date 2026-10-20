@@ -12,7 +12,7 @@ from flask import Flask, render_template, request, session, redirect, g, flash
 from llm_client import predict_justification_score_api, predict_justification_evaluation_api, generate_mcqs_from_notes_api
 import psycopg
 from psycopg.rows import dict_row
-from config import DB_CONFIG
+from config import SECRET_KEY, DB_CONFIG, get_db_connection
 
 def get_db_connection():
     print("DEBUG - App file:", __file__)
