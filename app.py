@@ -3107,16 +3107,16 @@ def admin_mcqs_generate(book_id):
         extracted_file_chars=extracted_file_chars
     )
 
+
 @app.route('/admin/mcqs/save-generated/<int:book_id>', methods=['POST'])
 def admin_mcqs_save_generated(book_id):
 
     if session.get('user_role') not in ['administrator', 'teacher']:
         return redirect('/login')
 
-    assessment_title = request.form.get('assessment_title', '').strip()
-
-    if not assessment_title:
-        assessment_title = "Untitled Assessment"
+    assessment_title = request.form.get(
+        'assessment_title', ''
+    ).strip() or "Untitled Assessment"
 
     questions = request.form.getlist('question')
     option_as = request.form.getlist('option_a')
@@ -3139,7 +3139,6 @@ def admin_mcqs_save_generated(book_id):
     print("Difficulties:", len(difficulties))
     print("Question types:", len(question_types))
 
-   
     conn = None
     cursor = None
 
@@ -3147,142 +3146,112 @@ def admin_mcqs_save_generated(book_id):
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # KEEP YOUR EXISTING DATABASE CODE HERE:
-        # 1. Insert into assessments
-        # 2. Retrieve assessment_id
-        # 3. Loop through and insert valid MCQs
-        # 4. Handle saved_count == 0
-        # 5. Commit successful saves
-
-    except Exception:
-        traceback.print_exc()
-
-        if conn:
-            conn.rollback()
-
-        return "Failed to save generated MCQs. Check Vercel function logs.", 500
-
-    finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
-
-    cursor.execute("""
-        INSERT INTO assessments
-        (
-            book_id,
-            title,
-            assessment_type,
-            is_published,
-            created_by,
-            created_at
-        )
-        VALUES (%s, %s, 'quiz', TRUE, %s, NOW())
-        RETURNING id
-    """, (
-        book_id,
-        assessment_title,
-        session.get('user_id')
-    ))
-
-    assessment_id = cursor.fetchone()["id"]
-
-    saved_count = 0
-
-    for i in range(len(questions)):
-
-        question = questions[i].strip()
-
-        option_a = option_as[i].strip() if i < len(option_as) else ""
-        option_b = option_bs[i].strip() if i < len(option_bs) else ""
-        option_c = option_cs[i].strip() if i < len(option_cs) else ""
-        option_d = option_ds[i].strip() if i < len(option_ds) else ""
-
-        correct_option = (
-            correct_options[i].strip().upper()
-            if i < len(correct_options)
-            else ""
-        )
-
-        model_justification = (
-            model_justifications[i].strip()
-            if i < len(model_justifications)
-            else ""
-        )
-
-        difficulty = (
-            difficulties[i].strip().capitalize()
-            if i < len(difficulties)
-            else "Medium"
-        )
-
-        question_type = (
-            question_types[i].strip()
-            if i < len(question_types)
-            else "MCQ"
-        )
-
-        # Validate question type
-        if question_type not in ['MCQ', 'True/False']:
-            question_type = 'MCQ'
-
-        # Validate difficulty
-        if difficulty not in ['Easy', 'Medium', 'Hard']:
-            difficulty = 'Medium'
-
-        # Validate question
-        if not question:
-            print(f"Skipping Q{i + 1}: empty question")
-            continue
-
-        # Validate correct answer
-        if question_type == 'True/False':
-
-            if correct_option not in ['A', 'B']:
-                print(
-                    f"Skipping Q{i + 1}: invalid True/False answer "
-                    f"({correct_option})"
-                )
-                continue
-
-            if not option_a or not option_b:
-                print(
-                    f"Skipping Q{i + 1}: missing True/False options"
-                )
-                continue
-
-        else:
-
-            if correct_option not in ['A', 'B', 'C', 'D']:
-                print(
-                    f"Skipping Q{i + 1}: invalid MCQ answer "
-                    f"({correct_option})"
-                )
-                continue
-
-            if not option_a or not option_b or not option_c or not option_d:
-                print(
-                    f"Skipping Q{i + 1}: missing MCQ option"
-                )
-                continue
-
-        # Justification is required for both types
-        if not model_justification:
-            print(f"Skipping Q{i + 1}: missing justification")
-            continue
-
-        print(
-            f"Saving Q{i + 1}: "
-            f"type={question_type}, "
-            f"correct={correct_option}, "
-            f"difficulty={difficulty}"
-        )
-
+        # Create the assessment
         cursor.execute("""
-            INSERT INTO mcqs
+            INSERT INTO assessments
             (
+                book_id,
+                title,
+                assessment_type,
+                is_published,
+                created_by,
+                created_at
+            )
+            VALUES (%s, %s, 'quiz', TRUE, %s, NOW())
+            RETURNING id
+        """, (
+            book_id,
+            assessment_title,
+            session.get('user_id')
+        ))
+
+        assessment_id = cursor.fetchone()["id"]
+        saved_count = 0
+
+        # Save valid MCQs
+        for i in range(len(questions)):
+
+            question = questions[i].strip()
+
+            option_a = option_as[i].strip() if i < len(option_as) else ""
+            option_b = option_bs[i].strip() if i < len(option_bs) else ""
+            option_c = option_cs[i].strip() if i < len(option_cs) else ""
+            option_d = option_ds[i].strip() if i < len(option_ds) else ""
+
+            correct_option = (
+                correct_options[i].strip().upper()
+                if i < len(correct_options) else ""
+            )
+
+            model_justification = (
+                model_justifications[i].strip()
+                if i < len(model_justifications) else ""
+            )
+
+            difficulty = (
+                difficulties[i].strip().capitalize()
+                if i < len(difficulties) else "Medium"
+            )
+
+            question_type = (
+                question_types[i].strip()
+                if i < len(question_types) else "MCQ"
+            )
+
+            if question_type not in ['MCQ', 'True/False']:
+                question_type = 'MCQ'
+
+            if difficulty not in ['Easy', 'Medium', 'Hard']:
+                difficulty = 'Medium'
+
+            if not question:
+                print(f"Skipping Q{i + 1}: empty question")
+                continue
+
+            if question_type == 'True/False':
+                if correct_option not in ['A', 'B']:
+                    print(f"Skipping Q{i + 1}: invalid True/False answer")
+                    continue
+
+                if not option_a or not option_b:
+                    print(f"Skipping Q{i + 1}: missing True/False options")
+                    continue
+
+            else:
+                if correct_option not in ['A', 'B', 'C', 'D']:
+                    print(f"Skipping Q{i + 1}: invalid MCQ answer")
+                    continue
+
+                if not all([option_a, option_b, option_c, option_d]):
+                    print(f"Skipping Q{i + 1}: missing MCQ option")
+                    continue
+
+            if not model_justification:
+                print(f"Skipping Q{i + 1}: missing justification")
+                continue
+
+            print(
+                f"Saving Q{i + 1}: type={question_type}, "
+                f"correct={correct_option}, difficulty={difficulty}"
+            )
+
+            cursor.execute("""
+                INSERT INTO mcqs
+                (
+                    question,
+                    option_a,
+                    option_b,
+                    option_c,
+                    option_d,
+                    correct_option,
+                    model_justification,
+                    difficulty,
+                    question_type,
+                    book_id,
+                    assessment_id
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
                 question,
                 option_a,
                 option_b,
@@ -3294,47 +3263,40 @@ def admin_mcqs_save_generated(book_id):
                 question_type,
                 book_id,
                 assessment_id
-            )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, (
-            question,
-            option_a,
-            option_b,
-            option_c,
-            option_d,
-            correct_option,
-            model_justification,
-            difficulty,
-            question_type,
-            book_id,
-            assessment_id
-        ))
+            ))
 
-        saved_count += 1
+            saved_count += 1
 
-    print("TOTAL SAVED:", saved_count)
+        print("TOTAL SAVED:", saved_count)
 
-    if saved_count == 0:
+        if saved_count == 0:
+            # Roll back the assessment and any related changes.
+            conn.rollback()
+            return "Error: No valid MCQs were available to save.", 400
 
-        cursor.execute(
-            "DELETE FROM assessments WHERE id = %s",
-            (assessment_id,)
+        # Commit only after all valid questions are inserted.
+        conn.commit()
+
+        return redirect(
+            f'/admin/assessment/{assessment_id}/mcqs'
         )
 
-        conn.commit()
-        cursor.close()
-        conn.close()
+    except Exception:
+        import traceback
+        traceback.print_exc()
 
-        return "Error: No valid MCQs were available to save."
+        if conn is not None:
+            conn.rollback()
 
-    conn.commit()
+        return "Failed to save generated MCQs. Check server logs.", 500
 
-    cursor.close()
-    conn.close()
+    finally:
+        if cursor is not None:
+            cursor.close()
 
-    return redirect(
-        f'/admin/assessment/{assessment_id}/mcqs'
-    )
+        if conn is not None:
+            conn.close()
+
             
 @app.route('/admin/students/<int:class_id>')
 def admin_students(class_id):
