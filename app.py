@@ -1939,11 +1939,7 @@ def student_quiz_submit():
                     mcq['correct_option']
                 )
 
-                option_marks = (
-                    0.8
-                    if option_correct
-                    else 0.0
-                )
+                option_marks = 1.0 if option_correct else 0.0
 
 
                 # ---------------------------------------------
@@ -1983,20 +1979,13 @@ def student_quiz_submit():
                 # JUSTIFICATION MARKS
                 # ---------------------------------------------
 
-                just_marks = (
-                    float(just_percent)
-                    / 100.0
-                ) * 0.2
-
+                just_marks = 0.0
 
                 # ---------------------------------------------
                 # TOTAL QUESTION MARKS
                 # ---------------------------------------------
 
-                marks = (
-                    option_marks +
-                    just_marks
-                )
+                marks = option_marks
 
 
                 # ---------------------------------------------
@@ -2034,25 +2023,21 @@ def student_quiz_submit():
                     )
 
 
-                feedback_parts = [
+                
+                    feedback_parts = [
+                        (
+                            f"{'Correct' if option_correct else 'Wrong'} "
+                            f"option ({option_marks:.1f}/1.0)"
+                        ),
+                        (
+                            f"{justification_label}: "
+                            f"{just_percent:.1f}% (0.0/0.0 marks)"
+                        )
+                    ]
 
-                    (
-                        f"{'Correct' if option_correct else 'Wrong'} "
-                        f"option "
-                        f"({option_marks:.1f}/0.8)"
-                    ),
+                    feedback = '; '.join(feedback_parts)
 
-                    (
-                        f"{justification_label}: "
-                        f"{just_percent:.1f}% "
-                        f"({just_marks:.1f}/0.2)"
-                    )
 
-                ]
-
-                feedback = (
-                    '; '.join(feedback_parts)
-                )
 
 
             # -------------------------------------------------
