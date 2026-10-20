@@ -15,10 +15,9 @@ from config import DB_CONFIG
 
 def get_db_connection():
     print("DEBUG - App file:", __file__)
-<<<<<<< HEAD
+
     print("DEBUG - DB username:", DB_CONFIG.get("user"))
-=======
->>>>>>> 0f0c3751fc5f9e432abb2864fd4318fe172f0dc6
+
     print("DEBUG - Password configured:", bool(DB_CONFIG.get("password")))
     print("DEBUG - DB host:", DB_CONFIG.get("host"))
     print("DEBUG - DB name:", DB_CONFIG.get("dbname"))
@@ -485,6 +484,7 @@ def is_allowed_notes_file(filename):
 def index():
     return redirect_to_role_dashboard()
 
+
 @app.route('/login', methods=['GET', 'POST'])
 def login_page():
     if session.get("user_role") and session.get("user_id"):
@@ -503,46 +503,86 @@ def login_page():
             error = "Please enter both username and password."
             return render_template('login.html', error=error)
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
+        conn = None
+        cursor = None
 
-        cursor.execute("""
-            SELECT id, role, name, username
-            FROM admins
-            WHERE username = %s AND password = %s
-        """, (username, password))
-        admin = cursor.fetchone()
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
 
-        if admin:
-            session.clear()
-            session['user_role'] = admin['role']
-            session['user_id'] = admin['id']
-            session['display_name'] = admin.get('name') or admin.get('username') or 'Administrator'
+            print("LOGIN DEBUG: connection established")
+            print("LOGIN DEBUG: username submitted:", repr(username))
 
-            cursor.close()
-            conn.close()
-            return redirect('/admin/dashboard')
+            cursor.execute("""
+                SELECT id, role, name, username
+                FROM admins
+                WHERE username = %s
+            """, (username,))
+            admin = cursor.fetchone()
 
-        cursor.execute("""
-            SELECT id, name, username
-            FROM students
-            WHERE username = %s AND password = %s
-        """, (username, password))
-        student = cursor.fetchone()
+            print("LOGIN DEBUG: admin username found:", bool(admin))
 
-        if student:
-            session.clear()
-            session['user_role'] = 'student'
-            session['user_id'] = student['id']
-            session['display_name'] = student.get('name') or student.get('username') or 'Student'
+            if admin:
+                cursor.execute("""
+                    SELECT id
+                    FROM admins
+                    WHERE username = %s AND password = %s
+                """, (username, password))
 
-            cursor.close()
-            conn.close()
-            return redirect('/student/dashboard')
+                admin_match = cursor.fetchone()
+                print("LOGIN DEBUG: admin password matched:", bool(admin_match))
 
-        cursor.close()
-        conn.close()
-        error = "Invalid username or password."
+                if admin_match:
+                    session.clear()
+                    session['user_role'] = admin['role']
+                    session['user_id'] = admin['id']
+                    session['display_name'] = (
+                        admin.get('name') or admin.get('username')
+                        or 'Administrator'
+                    )
+                    return redirect('/admin/dashboard')
+
+            cursor.execute("""
+                SELECT id, name, username
+                FROM students
+                WHERE username = %s
+            """, (username,))
+            student = cursor.fetchone()
+
+            print("LOGIN DEBUG: student username found:", bool(student))
+
+            if student:
+                cursor.execute("""
+                    SELECT id
+                    FROM students
+                    WHERE username = %s AND password = %s
+                """, (username, password))
+
+                student_match = cursor.fetchone()
+                print("LOGIN DEBUG: student password matched:",
+                      bool(student_match))
+
+                if student_match:
+                    session.clear()
+                    session['user_role'] = 'student'
+                    session['user_id'] = student['id']
+                    session['display_name'] = (
+                        student.get('name') or student.get('username')
+                        or 'Student'
+                    )
+                    return redirect('/student/dashboard')
+
+            error = "Invalid username or password."
+
+        except Exception:
+            app.logger.exception("LOGIN DEBUG: login failed due to a server error")
+            error = "Login is temporarily unavailable. Please try again."
+
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
 
     return render_template('login.html', error=error)
 
