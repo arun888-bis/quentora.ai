@@ -1,6 +1,7 @@
 import io
 import os
 import tempfile
+import traceback
 from functools import wraps
 from PyPDF2 import PdfReader
 from docx import Document
@@ -3138,8 +3139,35 @@ def admin_mcqs_save_generated(book_id):
     print("Difficulties:", len(difficulties))
     print("Question types:", len(question_types))
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
+   
+    conn = None
+    cursor = None
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # KEEP YOUR EXISTING DATABASE CODE HERE:
+        # 1. Insert into assessments
+        # 2. Retrieve assessment_id
+        # 3. Loop through and insert valid MCQs
+        # 4. Handle saved_count == 0
+        # 5. Commit successful saves
+
+    except Exception:
+        traceback.print_exc()
+
+        if conn:
+            conn.rollback()
+
+        return "Failed to save generated MCQs. Check Vercel function logs.", 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
 
     cursor.execute("""
         INSERT INTO assessments
